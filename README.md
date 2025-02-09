@@ -27,8 +27,14 @@ Example set up
 Set Up Your Environment:
 Use Docker to create a consistent development environment.
 Set up a virtual environment and install necessary packages.
+docker build -t myapp .
+docker images
 Data Ingestion:
 Use Apache Airflow to schedule and manage your data ingestion workflows.
+wsl -d Ubuntu
+docker-compose build
+docker-compose up -d
+Wait some time for the server to be working
 Connect to Snowflake to fetch data.
 Data Processing:
 Use Apache Spark for processing large datasets.
@@ -40,3 +46,4 @@ Use Tableau or Power BI to create dashboards and visualize your data.
 Deployment:
 Deploy your app using Kubernetes for scalability.
 Use CI/CD pipelines (e.g., GitHub Actions) to automate testing and deployment.
+
