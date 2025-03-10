@@ -31,10 +31,13 @@ docker build -t myapp .
 docker images
 Data Ingestion:
 Use Apache Airflow to schedule and manage your data ingestion workflows.
+
 wsl -d Ubuntu
+Launch Docker Desktop
 docker-compose build
 docker-compose up -d
 Wait some time for the server to be working
+
 Connect to Snowflake to fetch data.
 Data Processing:
 Use Apache Spark for processing large datasets.

@@ -2,10 +2,8 @@ x-airflow-common:
   &airflow-common
   build: .
   environment:
-    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
-    AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
     AIRFLOW__WEBSERVER__WORKERS: 4
     AIRFLOW__WEBSERVER__WEB_SERVER_PORT: 8080
     AIRFLOW__CORE__FERNET_KEY: ''
@@ -29,11 +27,6 @@ services:
       start_period: 5s
       timeout: 5s
 
-  redis:
-    image: redis:latest
-    expose:
-      - "6379"
-
   airflow-webserver:
     <<: *airflow-common
     ports:
@@ -48,49 +41,55 @@ services:
         condition: service_completed_successfully
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_started
     command: ["airflow", "webserver", "--workers", "1", "--debug"]
     volumes:
       - ./requirements.txt:/opt/airflow/requirements.txt
-      - ./dags:/opt/airflow/dags  # Mount local dags folder into the container
+      - ./dags:/opt/airflow/dags
       - ./data:/opt/airflow/data
+      - ./.env:/opt/airflow/.env  # Mount the .env file
 
   airflow-scheduler:
     <<: *airflow-common
     depends_on:
       - airflow-webserver
       - postgres
-      - redis
     command: ["airflow", "scheduler"]
     volumes:
       - ./requirements.txt:/opt/airflow/requirements.txt
-      - ./dags:/opt/airflow/dags  # Mount local dags folder into the container
+      - ./dags:/opt/airflow/dags
       - ./data:/opt/airflow/data
-
-  airflow-worker:
-    <<: *airflow-common
-    depends_on:
-      - airflow-scheduler
-      - redis
-      - postgres
-    command: ["airflow", "celery", "worker"]
-    volumes:
-      - ./requirements.txt:/opt/airflow/requirements.txt
-      - ./dags:/opt/airflow/dags  # Mount local dags folder into the container
-      - ./data:/opt/airflow/data
+      - ./.env:/opt/airflow/.env  # Mount the .env file
 
   airflow-init:
     <<: *airflow-common
     entrypoint: ["/bin/bash", "-c", "/entrypoint.sh"]
     depends_on:
       - postgres
-      - redis
     command: ["airflow", "db", "migrate"]
     volumes:
       - ./requirements.txt:/opt/airflow/requirements.txt
-      - ./dags:/opt/airflow/dags  # Mount local dags folder into the container
+      - ./dags:/opt/airflow/dags
+      - ./.env:/opt/airflow/.env  # Mount the .env file
+  spark:
+    image: bitnami/spark:latest
+    container_name: spark
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    ports:
+      - "8181:8080"  # Spark UI
+      - "7077:7077"  # Spark Master Port
+  spark-worker:
+    image: bitnami/spark:latest
+    container_name: spark-worker
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark:7077
+    depends_on:
+      - spark
 
 volumes:
   postgres-db-volume:
-
